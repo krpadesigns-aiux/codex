@@ -190,6 +190,54 @@ async fn queued_prompt_clears_questions_arriving_after_enqueue_when_it_starts() 
 }
 
 #[tokio::test]
+async fn turn_complete_does_not_dispatch_queued_follow_up_while_blocking_input_is_open() {
+    let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.thread_id = Some(ThreadId::new());
+    handle_turn_started(&mut chat, "turn-1");
+
+    chat.bottom_pane
+        .set_composer_text("queued follow-up".into(), Vec::new(), Vec::new());
+    chat.handle_key_event(KeyEvent::from(KeyCode::Tab));
+    assert!(op_rx.try_recv().is_err());
+
+    chat.handle_request_user_input_now(ToolRequestUserInputParams {
+        thread_id: "thread-1".to_string(),
+        item_id: "call-1".to_string(),
+        turn_id: "turn-1".to_string(),
+        questions: vec![ToolRequestUserInputQuestion {
+            id: "answer".to_string(),
+            header: "Answer".to_string(),
+            question: "Continue?".to_string(),
+            is_other: false,
+            is_secret: false,
+            options: None,
+        }],
+        is_blocking: true,
+        auto_resolution_ms: None,
+    });
+    assert!(!chat.bottom_pane.no_modal_or_popup_active());
+
+    handle_turn_completed(&mut chat, "turn-1", /*duration_ms*/ None);
+
+    assert!(!chat.bottom_pane.no_modal_or_popup_active());
+    let premature_op = op_rx.try_recv();
+    assert!(premature_op.is_err(), "premature op: {premature_op:?}");
+    assert_eq!(chat.input_queue.queued_user_messages.len(), 1);
+    assert_eq!(
+        chat.input_queue.queued_user_messages.front().unwrap().text,
+        "queued follow-up"
+    );
+
+    chat.bottom_pane.handle_paste("yes".into());
+    chat.handle_key_event(KeyEvent::from(KeyCode::Enter));
+
+    assert!(chat.bottom_pane.no_modal_or_popup_active());
+    assert_answer(op_rx.try_recv().unwrap(), "queued follow-up");
+    assert!(chat.input_queue.queued_user_messages.is_empty());
+    assert!(op_rx.try_recv().is_err());
+}
+
+#[tokio::test]
 async fn queued_question_answer_preserves_other_questions_on_delivery() {
     let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.thread_id = Some(ThreadId::new());

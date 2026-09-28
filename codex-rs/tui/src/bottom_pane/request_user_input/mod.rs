@@ -1143,6 +1143,10 @@ impl RequestUserInputOverlay {
 }
 
 impl BottomPaneView for RequestUserInputOverlay {
+    fn blocks_queued_input_autosend(&self) -> bool {
+        true
+    }
+
     fn keymap_contexts(&self) -> crate::keymap::KeymapContextSet {
         if self.confirm_unanswered_active() {
             return crate::keymap::KeymapContextSet::default();

@@ -1732,6 +1732,11 @@ impl BottomPane {
         !self.view_stack.is_empty()
     }
 
+    pub(crate) fn active_view_blocks_queued_input_autosend(&self) -> bool {
+        self.active_view()
+            .is_some_and(|view| view.blocks_queued_input_autosend())
+    }
+
     pub(crate) fn active_view_will_interrupt_turn_on_key_event(&self, key_event: KeyEvent) -> bool {
         self.is_task_running
             && self

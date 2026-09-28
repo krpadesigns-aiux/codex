@@ -241,7 +241,9 @@ impl ChatWidget {
         {
             return false;
         }
-        if self.blocks_direct_input {
+        if self.blocks_direct_input
+            || self.bottom_pane.active_view_blocks_queued_input_autosend()
+        {
             return false;
         }
         if self.is_user_turn_pending_or_running() {

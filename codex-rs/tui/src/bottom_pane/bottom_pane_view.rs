@@ -42,6 +42,11 @@ pub(crate) trait BottomPaneView: Renderable {
         false
     }
 
+    /// Return true while this view owns blocking human input and queued follow-ups must wait.
+    fn blocks_queued_input_autosend(&self) -> bool {
+        false
+    }
+
     /// Clear any pending child-flow cleanup marker after a child view is cancelled.
     fn clear_dismiss_after_child_accept(&mut self) {}
 
